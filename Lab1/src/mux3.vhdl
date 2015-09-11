@@ -25,7 +25,7 @@ component and2
     output   : out std_logic);
 end component;
 
-component or2 is
+component or2
 
   port (
     input1   : in  std_logic;
@@ -33,14 +33,14 @@ component or2 is
     output   : out std_logic);
 end component;
 		
-component inverter is
+component inverter
 
   port (
     input    : in  std_logic;
     output   : out std_logic);
 end component;
 
-for and2_1, and2_2: and2 entity use work.and2(structural);
+for and2_1, and2_2: and2 use entity use work.and2(structural);
 for or2_1: or2 use entity work.or2(structural);
 for inverter_1: inverter use entity work.inverter(structural);
 
