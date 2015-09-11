@@ -11,7 +11,7 @@ use IEEE.std_logic_1164.all;
 entity adder4 is
 
   port (
-    input1   : in  std_logic_vector(3 downto 0);
+	input1   : in  std_logic_vector(3 downto 0);
     input2   : in  std_logic_vector(3 downto 0);
     carryin  : in  std_logic;
     sum      : out std_logic_vector(3 downto 0);
