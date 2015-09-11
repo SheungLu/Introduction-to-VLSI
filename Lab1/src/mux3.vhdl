@@ -19,13 +19,28 @@ end mux3;
 
 architecture structural of mux3 is
 
-component mux3
-	port (
-		sel			:in 	std_logic;
-		input		:in 	std_logic;
-		output	:out 	std_logic;);
+component and2
+  port (
+    input1   : in  std_logic;
+    input2   : in  std_logic;
+    output   : out std_logic);
+end component;
+
+component or2 is
+
+  port (
+    input1   : in  std_logic;
+    input2   : in  std_logic;
+    output   : out std_logic);
 end component;
 		
+component inverter is
+
+  port (
+    input    : in  std_logic;
+    output   : out std_logic);
+end component;
+
 for and2_1, and2_2: and2 use work.and2(structural);
 for or2_1: or2 use entity work.or2(structural);
 for inverter_1: inverter use entity work.inverter(structural);
