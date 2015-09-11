@@ -11,9 +11,9 @@ use IEEE.std_logic_1164.all;
 entity mux3 is
 
 	port (
-		sel			:in		std_logic_vector(1 downto 0);
-		input		:in		std_logic;
-		output	:out	std_logic;
+		sel	: in	std_logic_vector(1 downto 0);
+		input	: in	std_logic;
+		output	: out	std_logic;
 		);
 end mux3;
 
