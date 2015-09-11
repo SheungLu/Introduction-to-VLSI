@@ -40,7 +40,7 @@ component inverter
     output   : out std_logic);
 end component;
 
-for and2_1, and2_2: and2 use entity use work.and2(structural);
+for and2_1, and2_2: and2 use entity work.and2(structural);
 for or2_1: or2 use entity work.or2(structural);
 for inverter_1: inverter use entity work.inverter(structural);
 
