@@ -11,7 +11,8 @@ use IEEE.std_logic_1164.all;
 entity mux3 is
 
 	port (
-		sel	: in	std_logic_vector(1 downto 0);
+		s1	: in	std_logic;
+		s0	: in	std_logic;
 		input	: in	std_logic;
 		output	: out	std_logic);
 end mux3;
@@ -48,9 +49,9 @@ signal temp1, temp2, temp3: std_logic;
 
 begin
 
-and2_1: 	and2 	port map (sel(0), input, temp1);
+and2_1: 	and2 	port map (s0, input, temp1);
 inverter_1: inverter port map (input, temp2);
-and2_2: 	and2 	port map (sel(1), temp2, temp3);
+and2_2: 	and2 	port map (s1, temp2, temp3);
 or2_1:		or2		port map (temp1, temp3, output);
 
 end structural;
