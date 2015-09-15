@@ -53,7 +53,7 @@ io_process: process
   variable Ain, Bin, o1: std_logic_vector(3 downto 0);
   variable sel1, sel0 : std_logic;
   variable cin, cout : std_logic;
-  variable buf : line;
+  variable buf, buf2 : line;
 
 begin
 
@@ -85,13 +85,18 @@ begin
 	cout := cout1;
 
     write(buf,o1);
+	write(buf2,o1);
     writeline(outfile,buf);
+	writeline(output,buf2);
+	
 
 	write(buf,cout);
+	write(buf2,cout);
     writeline(outfile,buf);
-
-  end loop;
-
+	writeline(output,buf2);
+	
+	end loop;
+	wait;
 end process io_process;
 
 end test;
