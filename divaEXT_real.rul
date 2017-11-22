@@ -1,0 +1,1471 @@
+; Extraction rules for Scalable CMOS processes
+;
+; Use ivIf sections for process specific information:
+;   unique (to that process) device definitions
+;   setting sheet resistance/capacitance variables values
+;   setting parasitic variable values
+;
+; The main extraction process uses common rules near the end
+;  of the file after the ivIf sections
+;
+; Matthew Clapp  6/24/99
+; mod: Ralf Philipp 2/6/01
+; 	added AMI05: used values from T0BI run
+;	derived from Matt's HP05 extractor, not verified
+; 	no HRPoly
+; mod: RP Feb. 26, 2001
+;	replaced all minimum parasitic caps with global var
+;	MinParaCap, set to same val of 5e-15 (did global 
+;	replace on 5e-15 to MinParaCap, maybe problems... replaced
+;	some that were not min para caps, perhaps?) 
+; RP, March 13, 2001
+;	the poly2 of caps does not merge nets with the metal1 
+;		through P2Con????? FIXED
+; RP, July 10, 2001
+;	lowered MinParaCap to 3e-15, HRPoly works (has been for a while)
+; Tsung-Hsueh Lee 3/25/2014
+;   added AMI05_SUBM: used values from V37P run
+
+(drcExtractRules 
+
+    (ivIf 
+	(!(switch "ORB20") && 
+	    !(switch "VTI20") && 
+	    !(switch "AMI12") &&
+	    !(switch "AMI05") &&
+	    !(switch "AMI05_SUBM") &&
+	    !(switch "HP05"))
+	    then   
+	(drc 
+	    (geomBkgnd) 
+	    (area > 1) 
+; MOD by Ralf on Feb. 7, 2001
+	    "No scaling factor switch (`AMI05_SUBM`, `HP05`, `AMI05`, `ORB20`, `VTI20`, or `AMI12`.)"
+	)
+    ) 
+
+;    load("/depthome/mclapp/research/hp05/layers.il")
+;    load("/classapps/Cadence/techfiles/layers.il")
+;    load("/depthome/ralf/layers.il")
+    load("techfiles/layers2.il")
+
+    MinParaCap = 3e-15		; min para Cap, vals lower are ignored	    
+
+    (ivIf 
+	(switch "extract?") then 
+	(ivIf 
+	    ((switch "ORB20") || (switch "VTI20")) then 
+	    (lambda = 1.0) 
+	    (lambdaSq = (lambda * lambda))
+	    (hasNPN = t)
+	    (hasPoly2 = t)
+            (NWOhmsPerSquare = 2200)    ;NWELL RES
+            (NDOhmsPerSquare = 3.0)     ;NDIFF RES
+            (PDOhmsPerSquare = 2.8)     ;PDIFF RES (made up value)
+            (P1P2CapPerArea = 5.26e-16) ; POLY1-POLY2 CAP
+	) ; end ivIf ORB20 || VTI20
+
+	(ivIf 
+	    (switch "ORB20") then 
+	    ; PARASITICS PER MICRON^2
+	    ParaM1PwellCap = 2.6e-17
+	    ParaM1NwellCap = 2.6e-17
+	    ParaM2PwellCap = 1.6e-17
+	    ParaM2NwellCap = 1.6e-17
+	    ParaM2M1Cap = 3.6e-17
+	    ParaM2Poly1Cap = 2.1e-17 
+	    ParaM1Poly1Cap = 4.0e-17
+	    ParaPoly1PwellCap = 5.4e-17
+	    ParaPoly1NwellCap = 5.4e-17
+	) ; end ivIf ORB20
+
+	(ivIf 
+	    (switch "VTI20") then 
+	    ; PARASITICS PER MICRON^2
+	    ParaM1PwellCap = 2.6e-17
+	    ParaM1NwellCap = 2.6e-17
+	    ParaM2PwellCap = 1.8e-17
+	    ParaM2NwellCap = 1.8e-17
+	    ParaM2M1Cap = 4.5e-17
+	    ParaM2Poly1Cap = 2.4e-17 
+	    ParaM1Poly1Cap = 4.6e-17
+	    ParaPoly1PwellCap = 3.7e-17
+	    ParaPoly1NwellCap = 3.7e-17
+	) ; end ivIf VTI20
+
+	(ivIf 
+	    (switch "AMI12") then 
+	    (lambda = 0.6) 
+	    (lambdaSq = (lambda * lambda))
+	    (hasNPN = t)
+	    (hasPoly2 = t)
+            (NWOhmsPerSquare = 1200) ;NWELL RES
+            (NDOhmsPerSquare = 3.0)  ;NDIFF RES
+            (PDOhmsPerSquare = 2.8)  ;PDIFF RES (made up value)
+            (P1P2CapPerArea = 5.26e-16) ; POLY1-POLY2 CAP
+
+	    ; PARASITICS PER MICRON^2
+	    ParaM1PwellCap = 3.5e-17
+	    ParaM1NwellCap = 6.9e-17
+	    ParaM2PwellCap = 2.0e-17
+	    ParaM2NwellCap = 2.6e-17
+	    ParaM2M1Cap = 6.6e-17
+	    ParaM2Poly1Cap = 2.9e-17 
+	    ParaM1Poly1Cap = 6.9e-17
+	    ParaPoly1PwellCap = 6.5e-17
+	    ParaPoly1NwellCap = 6.5e-17
+
+	    ; FRINGE PARASITIC CAP'S FOLLOW
+	    (stCapF1 = (measureParasitic length 
+	    	(Metal1 over Metal2) 
+	    	(6.5e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (stCapF2 = (measureParasitic length 
+	    	(Metal2 over Metal1) 
+	    	(6.5e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic stCapF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic stCapF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1F1 = (measureParasitic length 
+	    	(Metal2 over Pwell) 
+	    	(4.1e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1aF1 = (measureParasitic length 
+	    	(Metal2 over Nwell1) 
+	    	(2.6e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal2) 
+	    	(2.6e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1bF1 = (measureParasitic length 
+	    	(Metal2 over Poly1wire) 
+	    	(4.1e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal2) 
+	    	(4.1e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2F1 = (measureParasitic length 
+	    	(Metal1 over Pwell) 
+	    	(4.5e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap2aF1 = (measureParasitic length 
+	    	(Metal1 over Nwell1) 
+	    	(6.4e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal1) 
+	    	(6.4e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap2aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2bF1 = (measureParasitic length 
+	    	(Metal1 over Poly1wire) 
+	    	(6.4e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal1) 
+	    	(6.4e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (saveParasitic cap2bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4aF1 = (measureParasitic length 
+	    	(Poly1wire over Nwell1) 
+	    	(5.5e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap4aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4bF1 = (measureParasitic length 
+	    	(Poly1wire over Pwell) 
+	    	(5.5e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap4bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+;	    (cap4c = (measureParasitic area 
+;	    	(Poly1wire over Poly2) 
+;	    	(6.01e-16 * lambdaSq) two_net
+;	    	(ignore < MinParaCap)
+;	        )) 
+;	    (saveParasitic cap4c "PLUS" "MINUS" "c"
+;	        "pcapacitor"
+;	    ) 
+	) ; end ivIf AMI12
+
+;HP05: NOTE: M3 para caps don't have lambda^2 correction, so are off by factor of ~8.2
+	(ivIf 
+	    (switch "HP05") then 
+	    (lambda = 0.35) 
+	    (lambdaSq = (lambda * lambda))
+            (hasNPN = nil)
+	    (hasPoly2 = nil)
+            (NWOhmsPerSquare = 1200) ;NWELL RES
+            (NDOhmsPerSquare = 2.0)  ;NDIFF RES
+            (PDOhmsPerSquare = 1.8)  ;PDIFF RES
+
+	    ; POLY-SIBLOCK RESISTOR
+	    (extractDevice PolySBRes 
+		(PolySBResTap "PLUS" "MINUS") "res symbol"
+	    )
+	    (PolyResArea = (measureParameter area 
+                (PolySBRes)
+            )) 
+	    (PolyResLen = (measureParameter length
+                (PolySBRes coincident Poly1) 0.5
+            )) 
+	    (PolyResLeff = (calculateParameter    ; subtract out deltaL
+                (PolyResLen - (0.2/0.35))
+            )) 
+	    (PolyResSquare = (calculateParameter
+                ( (PolyResLeff * PolyResLeff) / PolyResArea) 
+;               ( (PolyResLeff * PolyResLeff) / PolyResArea) - 2 What's this?
+            ))
+	    (PolyRes = (calculateParameter 
+                (PolyResSquare  * 110.0)
+            )) 
+            (saveParameter PolyRes "r")
+	    (saveRecognition PolySBRes "Resistor")
+
+	    ; CWELL CAP
+	    (extractDevice CWellCap
+		(Poly1wire "PLUS")
+		(CapWell "MINUS") "cap symbol"
+	    )
+	    (CWellCaparea = (measureParameter area
+                (CWellCap)
+            ))
+	    (scaledCWellCaparea = (calculateParameter
+                (CWellCaparea * lambdaSq * 2.30e-15)
+            ))
+	    (saveParameter scaledCWellCaparea "c")
+	    (saveRecognition CWellCap "Capacitor")
+
+	    ; EXPLICIT M1-P1 CAP
+	    (extractDevice M1P1cap
+		(Poly1wire "PLUS")
+		(Metal1 "MINUS") "cap symbol"
+	    )
+	    (M1P1Caparea = (measureParameter area
+                (M1P1cap)
+            ))
+	    (scaledM1P1Caparea = (calculateParameter
+                (M1P1Caparea * lambdaSq * 6.0e-17)
+            ))
+	    (saveParameter scaledM1P1Caparea "c")
+	    (saveRecognition M1P1cap "Capacitor")
+         
+	    ; PARASITICS PER MICRON^2 (nominal)
+	    ParaM1PwellCap = 4.2e-17
+	    ParaM1NwellCap = 4.2e-17
+	    ParaM2PwellCap = 1.6e-17
+	    ParaM2NwellCap = 1.6e-17
+	    ParaM2M1Cap = 4.5e-17
+	    ParaM2Poly1Cap = 1.8e-17 
+	    ParaM1Poly1Cap = 6.7e-17
+	    ParaPoly1PwellCap = 10.5e-17
+	    ParaPoly1NwellCap = 10.5e-17
+
+	    (cap3 = (measureParasitic area 
+		(Metal3 over Pwell) 
+                 0.92e-17 two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3 "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3a = (measureParasitic area 
+		(Metal3 over Nwell1) 
+                 0.92e-17 two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3a "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3b = (measureParasitic area 
+		(Metal3 over Poly1wire) 
+                 1.1e-17 two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3b "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3c = (measureParasitic area 
+		(Metal3 over Metal1) 
+                 1.6e-17 two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3c "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3d = (measureParasitic area 
+		(Metal3 over Metal2) 
+                 4.4e-17 two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3d "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+
+	    ; FRINGE PARASITIC CAP'S FOLLOW
+	    (stCapF1 = (measureParasitic length 
+	    	(Metal1 over Metal2) 
+	    	(1.7e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (stCapF2 = (measureParasitic length 
+	    	(Metal2 over Metal1) 
+	    	(1.9e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic stCapF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic stCapF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1F1 = (measureParasitic length 
+	    	(Metal2 over Pwell) 
+	    	(0.72e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1aF1 = (measureParasitic length 
+	    	(Metal2 over Nwell1) 
+	    	(0.72e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal2) 
+	    	(0.72e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1bF1 = (measureParasitic length 
+	    	(Metal2 over Poly1wire) 
+	    	(0.83e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal2) 
+	    	(0.62e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2F1 = (measureParasitic length 
+	    	(Metal1 over Pwell) 
+	    	(1.8e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap2aF1 = (measureParasitic length 
+	    	(Metal1 over Nwell1) 
+	    	(1.8e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal1) 
+	    	(1.8e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap2aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2bF1 = (measureParasitic length 
+	    	(Metal1 over Poly1wire) 
+	    	(2.7e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal1) 
+	    	(1.8e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (saveParasitic cap2bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4aF1 = (measureParasitic length 
+	    	(Poly1wire over Nwell1) 
+	    	(3.0e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap4aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4bF1 = (measureParasitic length 
+	    	(Poly1wire over Pwell) 
+	    	(3.0e-17 * lambda) two_net
+	    	(ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap4bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	) ; end ivIf HP05
+	
+; ADDED by Ralf on Feb. 7, 2001
+; Modified by Honghao on June 12, 2003 based on run T33A. 
+; Modified by Tsung on March 25, 2014 based on run V37P.
+	(ivIf 
+	    (switch "AMI05") then 
+	    (lambda = 0.35) 
+	    (lambdaSq = (lambda * lambda))
+            (hasNPN = nil)
+	    (hasPoly2 = t)
+            (NWOhmsPerSquare = 814.1) ;NWELL RES
+            (NDOhmsPerSquare = 82.4)  ;NDIFF RES
+            (PDOhmsPerSquare = 106.7)  ;PDIFF RES
+            (P1OhmsPerSquare = 23.2)   ;Poly1 RES
+            (P2HROhmsPerSquare = 1076)  ;HR_Poly Res, ranges from 1070 to 1350 or so
+            (P1P2CapPerArea = 9.22e-16) ; POLY1-POLY2 CAP  
+            (M1P1CapPerArea = 6.4e-17) ; M1-POLY1 CAP           
+
+	    ; HR-POLY RESISTOR (testing!!! functionality doubtful)
+	    (extractDevice PolyHRRes 
+		(PolyHRResTap "PLUS" "MINUS") "res symbol"
+	    )
+	    (PolyResArea = (measureParameter area 
+                (PolyHRRes)
+            )) 
+	    (PolyResLen = (measureParameter length
+                (PolyHRRes coincident Poly2) 0.5
+            )) 
+	    (PolyResLeff = (calculateParameter    ; subtract out deltaL
+                (PolyResLen - (0.1/0.35))	 ; ASSUMING deltaL is same for Poly2 as is for Poly1 (0.1u)
+            )) 
+	    (PolyResSquare = (calculateParameter
+                ( (PolyResLeff * PolyResLeff) / PolyResArea) 
+;               ( (PolyResLeff * PolyResLeff) / PolyResArea) - 2 What's this?
+            ))
+	    (PolyRes = (calculateParameter 
+                (PolyResSquare  * P2HROhmsPerSquare)
+            )) 
+            (saveParameter PolyRes "r")
+	    (saveRecognition PolyHRRes "Resistor")
+
+
+	    ; EXPLICIT M1-P1 CAP
+	    (extractDevice M1P1cap
+		(Poly1wire "PLUS")
+		(Metal1 "MINUS") "cap symbol"
+	    )
+	    (M1P1Caparea = (measureParameter area
+                (M1P1cap)
+            ))
+	    (scaledM1P1Caparea = (calculateParameter
+                (M1P1Caparea * lambdaSq * M1P1CapPerArea)
+            ))
+	    (saveParameter scaledM1P1Caparea "c")
+	    (saveRecognition M1P1cap "Capacitor")
+         
+	    ; AMI05 PARASITICS PER MICRON^2 (nominal)
+	    ParaM1PwellCap = 2.9e-17  	; based on V37P run
+	    ParaM1NwellCap = 3.1e-17 	; This is a GUESS, value not given
+	    ParaM2PwellCap = 1.2e-17  	; based on V37P run
+	    ParaM2NwellCap = 1.6e-17  	; This is a GUESS, value not given
+	    ParaM2M1Cap = 3.2e-17    	; based on V37P run
+	    ParaM2Poly1Cap = 1.6e-17  	; based on V37P run
+	    ParaM1Poly1Cap = 6.4e-17  	; based on V37P run
+	    ParaPoly1PwellCap = 8.6e-17 ; based on V37P run
+	    ParaPoly1NwellCap = 9.3e-17 ; This is a GUESS, value not spec'd
+	    ParaM3PwellCap = 8.0e-18	; based on V37P run  
+	    ParaM3NwellCap = 1.1e-17	; This is a GUESS, value not spec'd
+	    ParaM3Poly1Cap = 9.0e-18	; based on V37P run	    
+	    ParaM3M1Cap = 1.2e-17	; based on V37P run	    
+	    ParaM3M2Cap = 3.2e-17	; based on V37P run	   
+	    
+	    ;Fringe (edge) parasitics per Micron
+	    ;M2 over M1 is same as M1 over M2... this is wrong, but used anyway
+	    ParaEdgeM1M2Cap = 3.9e-17 		; based on V37P run, real
+	    ParaEdgeM2M1Cap = 3.9e-17 		; based on above, fake
+	    ParaEdgeM2PwellCap = 3.4e-17 	; based on V37P run, real
+	    ParaEdgeM2NwellCap = 3.4e-17	; FAKE, copy of M2Pwell
+	    ParaEdgeNwellM2Cap = 5.0e-18	; totally FAKE
+	    ParaEdgeM2Poly1Cap = 3.9e-17	; based on V37P run, real
+	    ParaEdgePoly1M2Cap = 3.9e-17	; based on above, fake
+	    ParaEdgeM1PwellCap = 5.1e-17	; based on V37P run, real
+	    ParaEdgeM1NwellCap = 5.1e-17	; FAKE, copy of above	
+	    ParaEdgeNwellM1Cap = 1.2e-17	; totally FAKE    
+	    ParaEdgeM1Poly1Cap = 7.0e-17	; based on V37P run, real
+	    ParaEdgePoly1M1Cap = 7.0e-17	; based on above, fake
+	    ParaEdgePoly1NwellCap = 3.0e-17	; totally FAKE
+	    ParaEdgePoly1PwellCap = 3.0e-17	; totally FAKE	    
+	    	   
+	    ParaEdgeM1M2Cap = 4.9e-17 	; based on V37P run
+	    ParaEdgeM2M1Cap = 5.5e-17 	; based on V37P run   
+	    
+	    (cap3 = (measureParasitic area 
+		(Metal3 over Pwell) 
+		(ParaM3PwellCap * lambdaSq) two_net 	
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3 "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3a = (measureParasitic area 
+		(Metal3 over Nwell1) 
+                 (ParaM3NwellCap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3a "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3b = (measureParasitic area 
+		(Metal3 over Poly1wire) 
+                 (ParaM3Poly1Cap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3b "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3c = (measureParasitic area 
+		(Metal3 over Metal1) 
+                 (ParaM3M1Cap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3c "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3d = (measureParasitic area 
+		(Metal3 over Metal2) 
+                 (ParaM3M2Cap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3d "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+
+	    ; FRINGE PARASITIC CAP'S FOLLOW 
+	    (stCapF1 = (measureParasitic length 
+	    	(Metal1 over Metal2) 
+	    	(ParaEdgeM1M2Cap * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (stCapF2 = (measureParasitic length 
+	    	(Metal2 over Metal1) 
+	    	(ParaEdgeM2M1Cap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic stCapF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic stCapF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1F1 = (measureParasitic length 
+	    	(Metal2 over Pwell) 
+	    	(ParaEdgeM2PwellCap * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1aF1 = (measureParasitic length 
+	    	(Metal2 over Nwell1) 
+	    	(ParaEdgeM2NwellCap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal2) 
+	    	(ParaEdgeNwellM2Cap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1bF1 = (measureParasitic length 
+	    	(Metal2 over Poly1wire) 
+	    	(ParaEdgeM2Poly1Cap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal2) 
+	    	(ParaEdgePoly1M2Cap * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2F1 = (measureParasitic length 
+	    	(Metal1 over Pwell) 
+	    	(ParaEdgeM1PwellCap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap2aF1 = (measureParasitic length 
+	    	(Metal1 over Nwell1) 
+	    	(ParaEdgeM1NwellCap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal1) 
+	    	(ParaEdgeNwellM1Cap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap2aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2bF1 = (measureParasitic length 
+	    	(Metal1 over Poly1wire) 
+	    	(ParaEdgeM1Poly1Cap * lambda) two_net	
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal1) 
+	    	(ParaEdgePoly1M1Cap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (saveParasitic cap2bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4aF1 = (measureParasitic length 
+	    	(Poly1wire over Nwell1) 
+	    	(ParaEdgePoly1NwellCap * lambda) two_net    
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap4aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4bF1 = (measureParasitic length 
+	    	(Poly1wire over Pwell) 
+	    	(ParaEdgePoly1PwellCap * lambda) two_net       
+	    	(ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap4bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	) ; end ivIf AMI05
+
+
+; ADDED by Tsung on March 25, 2014
+; Modified for real unit by Tsung on September 22, 2015
+	(ivIf 
+	    (switch "AMI05_SUBM") then 
+	    (lambda = 1) 
+	    (lambdaSq = (lambda * lambda))
+            (hasNPN = nil)
+	    (hasPoly2 = t)
+            (NWOhmsPerSquare = 814.1) ;NWELL RES
+            (NDOhmsPerSquare = 82.4)  ;NDIFF RES
+            (PDOhmsPerSquare = 106.7)  ;PDIFF RES
+            (P1OhmsPerSquare = 23.2)   ;Poly1 RES
+            (P2HROhmsPerSquare = 1076)  ;HR_Poly Res, ranges from 1070 to 1350 or so
+            (P1P2CapPerArea = 9.22e-16) ; POLY1-POLY2 CAP  
+            (M1P1CapPerArea = 6.4e-17) ; M1-POLY1 CAP          
+
+	    ; HR-POLY RESISTOR (testing!!! functionality doubtful)
+	    (extractDevice PolyHRRes 
+		(PolyHRResTap "PLUS" "MINUS") "res symbol"
+	    )
+	    (PolyResArea = (measureParameter area 
+                (PolyHRRes)
+            )) 
+	    (PolyResLen = (measureParameter length
+                (PolyHRRes coincident Poly2) 0.5
+            )) 
+	    (PolyResLeff = (calculateParameter    ; subtract out deltaL
+                (PolyResLen - 0.1)	 ; ASSUMING deltaL is same for Poly2 as is for Poly1 (0.1u)
+            )) 
+	    (PolyResSquare = (calculateParameter
+                ( (PolyResLeff * PolyResLeff) / PolyResArea) 
+;               ( (PolyResLeff * PolyResLeff) / PolyResArea) - 2 What's this?
+            ))
+	    (PolyRes = (calculateParameter 
+                (PolyResSquare  * P2HROhmsPerSquare)
+            )) 
+            (saveParameter PolyRes "r")
+	    (saveRecognition PolyHRRes "Resistor")
+
+
+	    ; EXPLICIT M1-P1 CAP
+	    (extractDevice M1P1cap
+		(Poly1wire "PLUS")
+		(Metal1 "MINUS") "cap symbol"
+	    )
+	    (M1P1Caparea = (measureParameter area
+                (M1P1cap)
+            ))
+	    (scaledM1P1Caparea = (calculateParameter
+                (M1P1Caparea * lambdaSq * M1P1CapPerArea)
+            ))
+	    (saveParameter scaledM1P1Caparea "c")
+	    (saveRecognition M1P1cap "Capacitor")
+         
+	    ; AMI05 PARASITICS PER MICRON^2 (nominal)
+	    ParaM1PwellCap = 2.9e-17  	; based on V37P run
+	    ParaM1NwellCap = 3.1e-17 	; This is a GUESS, value not given
+	    ParaM2PwellCap = 1.2e-17  	; based on V37P run
+	    ParaM2NwellCap = 1.6e-17  	; This is a GUESS, value not given
+	    ParaM2M1Cap = 3.2e-17    	; based on V37P run
+	    ParaM2Poly1Cap = 1.6e-17  	; based on V37P run
+	    ParaM1Poly1Cap = 6.4e-17  	; based on V37P run
+	    ParaPoly1PwellCap = 8.6e-17 ; based on V37P run
+	    ParaPoly1NwellCap = 9.3e-17 ; This is a GUESS, value not spec'd
+	    ParaM3PwellCap = 8.0e-18	; based on V37P run  
+	    ParaM3NwellCap = 1.1e-17	; This is a GUESS, value not spec'd
+	    ParaM3Poly1Cap = 9.0e-18	; based on V37P run	    
+	    ParaM3M1Cap = 1.2e-17	; based on V37P run	    
+	    ParaM3M2Cap = 3.2e-17	; based on V37P run	   
+	    
+	    ;Fringe (edge) parasitics per Micron
+	    ;M2 over M1 is same as M1 over M2... this is wrong, but used anyway
+	    ParaEdgeM1M2Cap = 3.9e-17 		; based on V37P run, real
+	    ParaEdgeM2M1Cap = 3.9e-17 		; based on above, fake
+	    ParaEdgeM2PwellCap = 3.4e-17 	; based on V37P run, real
+	    ParaEdgeM2NwellCap = 3.4e-17	; FAKE, copy of M2Pwell
+	    ParaEdgeNwellM2Cap = 5.0e-18	; totally FAKE
+	    ParaEdgeM2Poly1Cap = 3.9e-17	; based on V37P run, real
+	    ParaEdgePoly1M2Cap = 3.9e-17	; based on above, fake
+	    ParaEdgeM1PwellCap = 5.1e-17	; based on V37P run, real
+	    ParaEdgeM1NwellCap = 5.1e-17	; FAKE, copy of above	
+	    ParaEdgeNwellM1Cap = 1.2e-17	; totally FAKE    
+	    ParaEdgeM1Poly1Cap = 7.0e-17	; based on V37P run, real
+	    ParaEdgePoly1M1Cap = 7.0e-17	; based on above, fake
+	    ParaEdgePoly1NwellCap = 3.0e-17	; totally FAKE
+	    ParaEdgePoly1PwellCap = 3.0e-17	; totally FAKE	    
+	    	   
+	    ParaEdgeM1M2Cap = 4.9e-17 	; based on V37P run
+	    ParaEdgeM2M1Cap = 5.5e-17 	; based on V37P run    
+	    
+	    (cap3 = (measureParasitic area 
+		(Metal3 over Pwell) 
+		(ParaM3PwellCap * lambdaSq) two_net 	
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3 "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3a = (measureParasitic area 
+		(Metal3 over Nwell1) 
+                 (ParaM3NwellCap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3a "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3b = (measureParasitic area 
+		(Metal3 over Poly1wire) 
+                 (ParaM3Poly1Cap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3b "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3c = (measureParasitic area 
+		(Metal3 over Metal1) 
+                 (ParaM3M1Cap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3c "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+	    (cap3d = (measureParasitic area 
+		(Metal3 over Metal2) 
+                 (ParaM3M2Cap * lambdaSq) two_net
+                 (ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap3d "PLUS" "MINUS" "c"
+		"pcapacitor"
+	    )
+
+	    ; FRINGE PARASITIC CAP'S FOLLOW 
+	    (stCapF1 = (measureParasitic length 
+	    	(Metal1 over Metal2) 
+	    	(ParaEdgeM1M2Cap * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (stCapF2 = (measureParasitic length 
+	    	(Metal2 over Metal1) 
+	    	(ParaEdgeM2M1Cap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic stCapF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic stCapF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1F1 = (measureParasitic length 
+	    	(Metal2 over Pwell) 
+	    	(ParaEdgeM2PwellCap * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1aF1 = (measureParasitic length 
+	    	(Metal2 over Nwell1) 
+	    	(ParaEdgeM2NwellCap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal2) 
+	    	(ParaEdgeNwellM2Cap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap1bF1 = (measureParasitic length 
+	    	(Metal2 over Poly1wire) 
+	    	(ParaEdgeM2Poly1Cap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap1bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal2) 
+	    	(ParaEdgePoly1M2Cap * lambda) two_net
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap1bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap1bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2F1 = (measureParasitic length 
+	    	(Metal1 over Pwell) 
+	    	(ParaEdgeM1PwellCap * lambda) two_net 
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2F1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap2aF1 = (measureParasitic length 
+	    	(Metal1 over Nwell1) 
+	    	(ParaEdgeM1NwellCap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2aF2 = (measureParasitic length 
+	    	(Nwell1 over Metal1) 
+	    	(ParaEdgeNwellM1Cap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (saveParasitic cap2aF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (cap2bF1 = (measureParasitic length 
+	    	(Metal1 over Poly1wire) 
+	    	(ParaEdgeM1Poly1Cap * lambda) two_net	
+	    	(ignore < MinParaCap)
+	    )) 
+	    (cap2bF2 = (measureParasitic length 
+	    	(Poly1wire over Metal1) 
+	    	(ParaEdgePoly1M1Cap * lambda) two_net  
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap2bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	    (saveParasitic cap2bF2 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4aF1 = (measureParasitic length 
+	    	(Poly1wire over Nwell1) 
+	    	(ParaEdgePoly1NwellCap * lambda) two_net    
+	    	(ignore < MinParaCap)
+	    )) 
+	    (saveParasitic cap4aF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    ) 
+	    (cap4bF1 = (measureParasitic length 
+	    	(Poly1wire over Pwell) 
+	    	(ParaEdgePoly1PwellCap * lambda) two_net       
+	    	(ignore < MinParaCap)
+	    ))
+	    (saveParasitic cap4bF1 "PLUS" "MINUS" "c"
+	        "pcapacitor"
+	    )
+	) ; end ivIf AMI05_SUBM
+
+
+; NFET, PFET FOR ALL PROCESSES
+	(extractDevice ngate 
+	    (Poly1wire "G") 
+	    (NSD "S" "D") 
+	    (Pwell "B")
+	    "nmos4 symbol"
+	    physical
+	) 
+	(extractDevice pgate 
+	    (Poly1wire "G") 
+	    (PSD "S" "D") 
+	    (Nwell1 "B")
+	    "pmos4 symbol"
+	    physical
+	) 
+	(NGateWidth = (measureParameter length 
+	    (ngate coincident Poly1) 0.5
+	)) 
+	(NGateLength = (measureParameter length 
+	    (ngate inside Poly1) 0.5
+        )) 
+	(PGateWidth = (measureParameter length 
+	    (pgate coincident Poly1) 0.5
+	))
+	(PGateLength = (measureParameter length 
+	    (pgate inside Poly1) 0.5
+        )) 
+	(ScaledNGW = (calculateParameter 
+	    (NGateWidth * lambda * 1e-06)
+        )) 
+	(ScaledNGL = (calculateParameter 
+	    (NGateLength * lambda * 1e-06)
+        )) 
+	(ScaledPGW = (calculateParameter 
+	    (PGateWidth * lambda * 1e-06)
+        )) 
+	(ScaledPGL = (calculateParameter 
+            (PGateLength * lambda * 1e-06)
+        ))
+	(saveParameter ScaledNGW "w") 
+	(saveParameter ScaledNGL "l") 
+	(saveParameter ScaledPGW "w") 
+	(saveParameter ScaledPGL "l") 
+	(NDrainArea = (measureParasitic area 
+            (NSD not_over Nwell) figure
+        ))
+	(NDrainPeri = (measureParasitic perimeter 
+            (NSD not_over Nwell) figure
+        )) 
+	(PDrainArea = (measureParasitic area 
+            (PSD not_over Pwell) figure
+        )) 
+	(PDrainPeri = (measureParasitic perimeter 
+            (PSD not_over Pwell) figure
+        )) 
+	(ScaledNAD = (calculateParasitic 
+            (NDrainArea * lambdaSq * 1e-12)
+        )) 
+	(ScaledNPD = (calculateParasitic 
+            (NDrainPeri * lambda * 1e-06)
+        ))
+	(ScaledPAD = (calculateParasitic 
+            (PDrainArea * lambdaSq * 1e-12)
+        )) 
+	(ScaledPPD = (calculateParasitic 
+	    (PDrainPeri * lambda * 1e-06)
+        )) 
+	(attachParasitic ScaledNAD 
+	    ("as" "S") 
+	    ("ad" "D") ngate
+	) 
+	(attachParasitic ScaledNPD 
+	    ("ps" "S") 
+	    ("pd" "D") ngate
+	) 
+	(attachParasitic ScaledPAD 
+	    ("as" "S") 
+	    ("ad" "D") pgate
+	)
+	(attachParasitic ScaledPPD 
+	    ("ps" "S") 
+	    ("pd" "D") pgate
+	) 
+	(saveRecognition pgate "Poly1") 
+	(saveRecognition ngate "Poly1") 
+
+; NMOS, PMOS WITH POLY2 GATE
+	(if hasPoly2 then
+	    (extractDevice ngate2 
+		(Poly2 "G") 
+		(NSD "S" "D") 
+		(Pwell "B")
+		"nmos4 symbol"
+	    ) 
+	    (extractDevice pgate2 
+		(Poly2 "G") 
+		(PSD "S" "D") 
+		(Nwell1 "B")
+		"pmos4 symbol"
+	    ) 
+	    (NGateWidth2 = (measureParameter length 
+		    (ngate2 coincident Poly2) 0.5
+		)) 
+	    (NGateLength2 = (measureParameter length 
+		   (ngate2 inside Poly2) 0.5
+		)) 
+	    (PGateWidth2 = (measureParameter length 
+		    (pgate2 coincident Poly2) 0.5
+		))
+	    (PGateLength2 = (measureParameter length 
+		    (pgate2 inside Poly2) 0.5
+		))
+	    (ScaledNGW2 = (calculateParameter 
+		    (NGateWidth2 * lambda * 1e-06)
+		)) 
+	    (ScaledNGL2 = (calculateParameter 
+		    (NGateLength2 * lambda * 1e-06)
+		)) 
+	    (ScaledPGW2 = (calculateParameter 
+		    (PGateWidth2 * lambda * 1e-06)
+		)) 
+	    (ScaledPGL2 = (calculateParameter 
+		    (PGateLength2 * lambda * 1e-06)
+		))
+ 	    (saveParameter ScaledNGW2 "w")
+            (saveParameter ScaledNGL2 "l")
+            (saveParameter ScaledPGW2 "w")
+            (saveParameter ScaledPGL2 "l")
+    
+	    (NDrainArea = (measureParasitic area 
+		    (NSD not_over Nwell) figure
+		))
+	    (NDrainPeri = (measureParasitic perimeter 
+		    (NSD not_over Nwell) figure
+		)) 
+	    (PDrainArea = (measureParasitic area 
+		    (PSD not_over Pwell) figure
+		)) 
+	    (PDrainPeri = (measureParasitic perimeter 
+		    (PSD not_over Pwell) figure
+		)) 
+	    (ScaledNAD = (calculateParasitic 
+		    (NDrainArea * lambdaSq * 1e-12)
+		)) 
+	    (ScaledNPD = (calculateParasitic 
+		    (NDrainPeri * lambda * 1e-06)
+		))
+	    (ScaledPAD = (calculateParasitic 
+		    (PDrainArea * lambdaSq * 1e-12)
+		)) 
+	    (ScaledPPD = (calculateParasitic 
+		    (PDrainPeri * lambda * 1e-06)
+		)) 
+	    (attachParasitic ScaledNAD 
+		("as" "S") 
+		("ad" "D") ngate2
+	    ) 
+	    (attachParasitic ScaledNPD 
+		("ps" "S") 
+		("pd" "D") ngate2
+	    ) 
+	    (attachParasitic ScaledPAD 
+		("as" "S") 
+		("ad" "D") pgate2
+	    )
+	    (attachParasitic ScaledPPD 
+		("ps" "S") 
+		("pd" "D") pgate2
+	    ) 
+	    (saveRecognition pgate2 "Poly2") 
+	    (saveRecognition ngate2 "Poly2") 
+	)
+
+; NPN FOR ALL
+        (if hasNPN then
+	    (extractDevice NPN 
+		(NSD1 "E") 
+		(base "B") 
+		(Nwell1 "C")
+		"npn symbol"
+	    ) 
+	    (emitterArea = (measureParasitic area 
+		((geomAnd NSD1 Pbase)) figure
+	    ))
+	    (ScaledEA = (calculateParasitic 
+		(emitterArea * lambdaSq * 1e-12)
+	    )) 
+	    (attachParasitic ScaledEA "area" NPN) 
+        )
+
+; NMOSCAP, PMOSCAP FOR ALL
+	(extractDevice NMoscap 
+	    (Poly1wire "G") 
+	    (Pwell "B") "nmoscap_2 symbol"
+	) 
+	(extractDevice PMoscap 
+	    (Poly1wire "G") 
+	    (Nwell1 "B") "pmoscap_2 symbol"
+	) 
+	(CapacitorWN = (measureParameter length 
+	    (NMoscap butting NSD) 0.5
+        ))
+	(CapacitorAN = (measureParameter area 
+	    (NMoscap)
+        )) 
+	(ScaledCWN = (calculateParameter 
+	    (CapacitorWN * lambda * 1e-06)
+        )) 
+	(ScaledCLN = (calculateParameter 
+	    ((CapacitorAN / CapacitorWN) * lambda * 1e-06)
+        )) 
+	(saveParameter ScaledCWN "w") 
+	(saveParameter ScaledCLN "l")
+	(CapacitorWP = (measureParameter length 
+	    (PMoscap butting PSD) 0.5
+        )) 
+	(CapacitorAP = (measureParameter area 
+	    (PMoscap)
+        )) 
+	(ScaledCWP = (calculateParameter 
+	    (CapacitorWP * lambda * 1e-06)
+        )) 
+	(ScaledCLP = (calculateParameter 
+	    ((CapacitorAP / CapacitorWP) * lambda * 1e-06)
+        )) 
+	(saveParameter ScaledCWP "w")
+	(saveParameter ScaledCLP "l") 
+	(saveRecognition NMoscap "Poly1") 
+	(saveRecognition PMoscap "Poly1") 
+
+; NDIODE, PDIODE FOR ALL
+	(extractDevice NDiode 
+	    (NSD "MINUS") 
+	    (Pwell "PLUS") "diode symbol analogLib"
+	) 
+	(extractDevice PDiode 
+	    (PSD "PLUS") 
+	    (Nwell1 "MINUS") "diode symbol analogLib"
+	)
+	(NDiodeArea = (measureParameter area 
+	    (NDiode) 1e-12
+	)) 
+	(PDiodeArea = (measureParameter area 
+	    (PDiode) 1e-12
+	)) 
+	(scaledNDiodeArea = (calculateParameter 
+	    (NDiodeArea * lambdaSq)
+	)) 
+	(scaledPDiodeArea = (calculateParameter 
+	    (PDiodeArea * lambdaSq)
+	)) 
+	(saveParameter scaledNDiodeArea "area")
+	(saveParameter scaledPDiodeArea "area") 
+	(saveRecognition NDiode "Nselect") 
+	(saveRecognition PDiode "Pselect") 
+
+; NWELL RESISTOR FOR ALL
+	(extractDevice NWellResistor 
+	    (NTapNWRes "PLUS" "MINUS") "res symbol"
+	) 
+	(NWResArea = (measureParameter area 
+	    (NWellResistor)
+	)) 
+	(NWResLeff = (measureParameter length 
+	    (NWellResistor coincident Nwell) 0.5
+	)) 
+	(NWResSquare = (calculateParameter 
+	    ( ((NWResLeff * NWResLeff)/ NWResArea) - 2 )
+        ))
+	(NWRes = (calculateParameter
+	    (NWResSquare * NWOhmsPerSquare)
+        )) 
+	(saveParameter NWRes "r") 
+	(saveRecognition NWellResistor "Nwell")
+
+; NDIFF RESISTOR FOR ALL
+	(extractDevice NDiffRes 
+	    (NTapNDRes "PLUS" "MINUS") "res symbol"
+	)
+	(NDResArea = (measureParameter area 
+	    (NDiffRes)
+        ))
+	(NDResLeff = (measureParameter length
+	    (NDiffRes coincident NActive) 0.5
+        )) 
+	(NDResSquare = (calculateParameter
+	    ( ((NDResLeff * NDResLeff) / NDResArea) - 2 ) 
+        ))
+	(NDRes = (calculateParameter 
+	    (NDResSquare  * NDOhmsPerSquare)
+        )) 
+	(saveParameter NDRes "r") 
+	(saveRecognition NDiffRes "Nselect") 
+
+; PDIFF RESISTOR FOR ALL
+	(extractDevice PDiffRes 
+	    (PTapPDRes "PLUS" "MINUS") "res symbol"
+	)
+	(PDResArea = (measureParameter area 
+            (PDiffRes)
+        )) 
+	(PDResLeff = (measureParameter length
+            (PDiffRes coincident PActive) 0.5
+        )) 
+	(PDResSquare = (calculateParameter
+            ( ((PDResLeff * PDResLeff) / PDResArea) - 2 ) 
+        ))
+	(PDRes = (calculateParameter 
+            (PDResSquare  * PDOhmsPerSquare)
+        )) 
+	(saveParameter PDRes "r") 
+	(saveRecognition PDiffRes "Pselect")
+
+; POLY1-POLY2 CAP
+        (if hasPoly2 then
+	    (extractDevice PolyCap 
+		(Poly1wire "PLUS") 
+		(Poly2wire "MINUS") "cap symbol"  ;***** changed from Poly2
+	    ) 
+	    (PolyCapArea = (measureParameter area 
+		    (PolyCap)
+		)) 
+	    (scaledCapArea = (calculateParameter 
+		    (PolyCapArea * lambdaSq * P1P2CapPerArea)
+		)) 
+	    (saveParameter scaledCapArea "c")
+	    (saveRecognition PolyCap "Poly1")
+        )
+
+; PARASITICS FOR ALL
+	(cap1 = (measureParasitic area 
+	    (Metal1 over Pwell) 
+	    (ParaM1PwellCap * lambdaSq) two_net
+	    (ignore < MinParaCap)
+	))
+	(saveParasitic cap1 "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	) 
+	(cap2 = (measureParasitic area 
+             (Metal2 over Pwell) 
+             (ParaM2PwellCap * lambdaSq) two_net
+             (ignore < MinParaCap)
+        ))
+	(saveParasitic cap2 "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	)
+	(stCap = (measureParasitic area 
+             (Metal1 over Metal2) 
+             (ParaM2M1Cap * lambdaSq) two_net
+             (ignore < MinParaCap)
+	)) 
+	(saveParasitic stCap "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	)
+	(cap1b = (measureParasitic area 
+	    (Metal2 over Poly1wire) 
+	    (ParaM2Poly1Cap * lambdaSq) two_net
+	    (ignore < MinParaCap)
+	))
+	(saveParasitic cap1b "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	) 
+	(cap2b = (measureParasitic area 
+	    (Metal1 over Poly1wire) 
+	    (ParaM1Poly1Cap * lambdaSq) two_net
+	    (ignore < MinParaCap)
+	)) 
+	(saveParasitic cap2b "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	) 
+	(cap4b = (measureParasitic area 
+	    (Poly1wire over Pwell) 
+	    (ParaPoly1PwellCap * lambdaSq) two_net
+	    (ignore < MinParaCap)
+	)) 
+	(saveParasitic cap4b "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	) 
+	(cap1a = (measureParasitic area 
+	    (Metal2 over Nwell1) 
+	    (ParaM2NwellCap * lambdaSq) two_net
+	    (ignore < MinParaCap)
+	)) 
+	(saveParasitic cap1a "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	) 
+	(cap2a = (measureParasitic area 
+	    (Metal1 over Nwell1) 
+	    (ParaM1NwellCap * lambdaSq) two_net
+	    (ignore < MinParaCap)
+	)) 
+	(saveParasitic cap2a "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	)
+	(cap4a = (measureParasitic area 
+	    (Poly1wire over Nwell1) 
+	    (ParaPoly1NwellCap * lambdaSq) two_net
+	    (ignore < MinParaCap)
+	)) 
+	(saveParasitic cap4a "PLUS" "MINUS" "c"
+	    "pcapacitor"
+	) 
+
+; SAVE INTERCONNECTS
+	(saveInterconnect 
+	    (Metal1 "Metal1")
+	) 
+	(saveInterconnect 
+	    (Metal2 "Metal2")
+	) 
+	(saveInterconnect 
+	    (Metal3 "Metal3")
+	) 
+	(saveInterconnect 
+	    (Via "Via")
+	) 
+	(saveInterconnect 
+	    (Via2 "Via2")
+	) 
+	(saveInterconnect 
+	    (Poly1wire "Poly1")
+	) 
+	(saveInterconnect 
+	    (P1Con "P1Con")
+	)
+	(saveInterconnect 
+	    (Poly2wire "Poly2")
+	) 		
+;	(saveInterconnect 
+;	    (Poly2 "Poly2")
+;	) 
+	(saveInterconnect 
+	    (P2Con "P2Con")
+	) 
+	(saveInterconnect 
+	    (NSD "Nselect")
+	) 
+	(saveInterconnect 
+	    (NSD1 "Nselect")
+	) 
+	(saveInterconnect 
+	    (PSD "Pselect")
+	)
+	(saveInterconnect 
+	    (ActX "ActX")
+	) 
+        (saveInterconnect
+            (CWellTap "Active")
+        )
+        (saveInterconnect
+            (CapWell "CapWell")
+        )
+	(saveInterconnect 
+	    (Pbase "Pbase")
+	) 
+	(saveInterconnect 
+	    (Nwell1 "Nwell")
+	) 
+        (saveInterconnect
+            (NTapNWRes "Active")
+        )
+        (saveInterconnect
+            (NTapNDRes "Active")
+        )
+        (saveInterconnect
+            (PTapPDRes "Active")
+        )
+        (saveInterconnect
+            (PolySBResTap "P1Con")
+        )
+; DEVICES
+        (saveInterconnect
+            (PolySBRes "Resistor")
+        )
+        (saveInterconnect
+            (ngate "Poly1")
+        )
+        (saveInterconnect
+            (pgate "Poly1")
+        )
+        (saveInterconnect
+            (NMoscap "Capacitor")
+        )
+        (saveInterconnect
+            (PMoscap "Capacitor")
+        )
+        (saveInterconnect
+             (PDiode "Diode")
+        )
+        (saveInterconnect
+             (NDiode "Diode")
+        )
+        (saveInterconnect
+             (CWellCap "Capacitor")
+        )
+	(saveInterconnect 
+	    (NWellResistor "Resistor")
+	) 
+	(saveInterconnect 
+	    (NDiffRes "Resistor")
+	)
+	(saveInterconnect 
+	    (PDiffRes "Resistor")
+	)
+    )
+)
+)

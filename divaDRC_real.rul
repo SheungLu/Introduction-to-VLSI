@@ -1,0 +1,1063 @@
+; Diva DRC rules
+; last mod. Feb. 26, 2001, Ralf Philipp
+; from Matt Clapp's file
+; added HR res rule checking (2.26.01)
+;	added 20.11 to Silicide Block (probably bad code!)
+;
+; added 7.4,9.4,15.4 (wide metal rules)		MAC  1-24-2002
+; updated pad rules				MAC  5- 5-2002
+; removed 'ORB20', 'VTI20' processes		MAC   5- 5-2002
+; updated for MOSIS scmos 8.0			MAC  11-14-2002
+; modified to SUBM rules	Tsung Mach 25, 2014
+(drcExtractRules 
+ ; AMI05 added by Ralf Philipp, Feb. 7, 2001
+ ; AMI05_SUBM added by Tsung-Hsueh Lee, March 25, 2014
+  (ivIf 
+    (!(switch "AMI12") &&
+            !(switch "AMI05") && 
+	    !(switch "HP05")) &&
+	    !(switch "AMI05_SUBM") then
+      (drc 
+        (geomBkgnd) 
+        (area > 1) 
+        "No scaling factor switch (`AMI05_SUBM`, `AMI05`, `AMI12`, or `HP05`.)"
+    )
+  ) 
+
+  ; check for stacked via support
+  (hasStackVia = nil)
+  (ivIf (switch "AMI05") || (switch "AMI05_SUBM") then
+    (hasStackVia = t)
+  )
+
+  load("techfiles/layers.il")
+
+; moved from GLASS section (RP Feb. 7, 2k1)	
+    (ivIf (switch "AMI12") then (lambda = 0.6))
+    (ivIf (switch "HP05") then (lambda = 0.35))
+    (ivIf (switch "AMI05") then (lambda = 0.35))
+    (ivIf (switch "AMI05_SUBM") then (lambda = 0.30))
+
+  (ivIf (switch "drc?") then 
+    (offGrid "Nwell" 0.5*lambda raw "Nwell off grid") 
+    (offGrid "Pselect" 0.5*lambda raw "Pselect off grid")
+    (offGrid "Nselect" 0.5*lambda raw "Nselect off grid") 
+    (offGrid "Active" 0.5*lambda raw "Active off grid") 
+    (offGrid "ActX" 0.5*lambda raw "ActX off grid") 
+    (offGrid "Poly1" 0.5*lambda raw "Poly1 off grid") 
+    (offGrid "P1Con" 0.5*lambda raw "P1Con off grid")
+    (offGrid "Poly2" 0.5*lambda raw "Poly2 off grid") 
+    (offGrid "P2Con" 0.5*lambda raw "P2Con off grid") 
+    (offGrid "Via" 0.5*lambda raw "Via off grid") 
+    (offGrid "Glass" 0.5*lambda raw "Glass off grid") 
+    (offGrid "Metal1" 0.5*lambda raw "Metal1 off grid")
+    (offGrid "Metal2" 0.5*lambda raw "Metal2 off grid") 
+    (offGrid "Metal3" 0.5*lambda raw "Metal3 off grid") 
+    (offGrid "Via2" 0.5*lambda raw "Via off grid") 
+    (offGrid "CapWell" 0.5*lambda raw "CapWell off grid") 
+    (offGrid "SiBlock" 0.5*lambda raw "SiBlock off grid")
+    (offGrid "HR" 0.5 raw "HR off grid") ; ***** RP 2.26.01, for AMI 0.5 HR
+    (dubiousData "Nwell" "Nwell: badly formed polygons") 
+    (dubiousData "Pselect" "Pselect: badly formed polygons") 
+    (dubiousData "Nselect" "Nselect: badly formed polygons") 
+    (dubiousData "Active" "Active: badly formed polygons")
+    (dubiousData "ActX" "ActX: badly formed polygons") 
+    (dubiousData "Poly1" "Poly1: badly formed polygons") 
+    (dubiousData "P1Con" "P1Con: badly formed polygons") 
+    (dubiousData "Poly2" "Poly2: badly formed polygons") 
+    (dubiousData "P2Con" "P2Con: badly formed polygons")
+    (dubiousData "Metal1" "Metal1: badly formed polygons") 
+    (dubiousData "Metal2" "Metal2: badly formed polygons") 
+    (dubiousData "Via" "Via badly: formed polygons") 
+    (dubiousData "Glass" "Glass badly: formed polygons") 
+    (dubiousData "Metal3" "Metal3: badly formed polygons") 
+    (dubiousData "Via2" "Via2 badly: formed polygons") 
+    (dubiousData "SiBlock" "SiBlock: badly formed polygons") 
+    (dubiousData "HR" "HR: badly formed polygons")
+    (dubiousData "CapWell" "CapWell: badly formed polygons")
+
+;HP 0.5 CHECK FOR DISALLOWED LAYERS
+    (ivIf (switch "HP05") then
+      (drc Pbase (area > 0)  "Pbase not allowed in HP Submicron process")
+      (drc Poly2 (area > 0)  "Poly2 not allowed in HP Submicron process")
+      (drc P2Con (area > 0)  "Poly2 contact not allowed in HP Submicron process")
+      (drc PolyCap (area > 0)  "PolyCap not allowed in HP Submicron process")
+      (drc HR (area > 0)  "HR not allowed in HP Submicron process")
+    )
+
+;AMI 0.5 CHECK FOR DISALLOWED LAYERS (R.P. Feb. 7, 2001)
+    (ivIf (switch "AMI05") || (switch "AMI05_SUBM") then
+      (drc Pbase (area > 0)  "Pbase not allowed in SCN05 process")
+      (drc CapWell (area > 0)  "Linear Capacitor (CapWell) not allowed in SCN05 process")
+      (drc SiBlock (area > 0)  "Silicide Block (SiBlock) not allowed in SCN05 process")
+    )
+
+; 2-Metal proc. check for disallowed layers
+    (ivIf (switch "AMI12") then
+      (drc Metal3 (area > 0)  "Metal3 not allowed in this process")
+      (drc CapWell (area > 0)  "Linear Capacitor not allowed in this process")
+      (drc SiBlock (area > 0)  "Silicide Block not allowed in this process")
+      (drc Via2 (area > 0)  "Via2 not allowed in this process")
+      (drc HR (area > 0)  "HR not allowed in this process")
+    )
+
+    (drc 
+      (geomHoles Nwell) 
+      (width < 3*lambda) "Warning: hole in Nwell layer"
+    )
+    (drc 
+      (geomHoles Active) 
+      (width < 3*lambda) "Warning: hole in Active layer"
+    ) 
+    (drc 
+      (geomHoles Nselect) 
+      (width < 3*lambda) "Warning: hole in Nselect layer"
+    ) 
+    (drc 
+      (geomHoles Pselect) 
+      (width < 3*lambda) "Warning: hole in Pselect layer"
+    ) 
+    (drc 
+      (geomHoles Pbase) 
+      (width < 3*lambda) "Warning: hole in Pbase layer"
+    ) 
+    (drc 
+      (geomHoles Poly1) 
+      (width < 2*lambda) "Warning: hole in Poly1 layer"
+    )
+    (drc 
+      (geomHoles Poly2) 
+      (width < 3*lambda) "Warning: hole in Poly2 layer"
+    ) 
+    (drc 
+      (geomHoles Metal1) 
+      (width < 3*lambda) "Warning: hole in Metal1 layer"
+    ) 
+    (drc 
+      (geomHoles Metal2) 
+      (width < 3*lambda) "Warning: hole in Metal2 layer"
+    ) 
+    (drc 
+      (geomHoles Metal3) 
+      (width < 3*lambda) "Warning: hole in Metal3 layer"
+    )
+    (drc 
+      (geomHoles CapWell) 
+      (width < 3*lambda) "Warning: hole in CapWell layer"
+    )
+    (drc 
+      (geomHoles SiBlock) 
+      (width < 3*lambda) "Warning: hole in SiBlock layer"
+    )
+    (drc 
+      (geomHoles HR) 
+      (width < 4*lambda) "Warning: hole in HR layer"
+    )
+    (drc 
+      (geomHoles Glass) 
+      (width < 3*lambda) "Warning: hole in Glass layer"
+    ) 
+    (drc 
+      (geomHoles XP) 
+      (width < 3*lambda) "Warning: hole in XP layer"
+    )
+
+
+; NWELL (MOSIS 1.X)
+    (drc Nwell 
+      (width < 12*lambda) "Well width must be at least 12 (Mosis 1.1)"
+    ) 
+    (drc Nwell1 
+      (sep < 18*lambda) diffNet "Well separation must be at least 18 (Mosis 1.2)"
+    ) 
+    (drc Nwell
+      (0 < notch < 6*lambda) "Well separation must be at least 6 (same net) (Mosis 1.3)"
+    )
+    (drc Nwell1 
+      (sep < 6*lambda) sameNet "Well separation must be at least 6 (same net) (Mosis 1.3)"
+    ) 
+
+; ACTIVE (MOSIS 2.X)
+    (drc Active 
+      (width < 3*lambda) "Active width must be at least 3 (Mosis 2.1)"
+    ) 
+    (drc Active 
+      (sep < 3*lambda) "Active separation must be at least 3 (Mosis 2.2) "
+    ) 
+    (drc Active
+      (0 < notch < 3*lambda) "Active separation must be at least 3 (Mosis 2.2)"
+    )
+
+    (A1 = (geomAnd Nwell Active)) 
+    (A2 = (geomAndNot Active Nwell))
+    (nsource = (geomAndNot (geomAnd Active Nselect) Nwell)) 
+    (psource = (geomAnd (geomAnd Active Pselect) Nwell)) 
+
+    (drc A1 A2 
+      (sep < 1) "Active should not overlap well edge"
+    ) 
+    (drc Nwell nsource 
+      (sep < 6*lambda) "Sourcedrain active must be at least 6 from well edge (Mosis 2.3)"
+    ) 
+    (drc Nwell psource 
+      (enc < 6*lambda) "Sourcedrain active must be at least 6 from well edge (Mosis 2.3)"
+    )
+    (drc Pwell psource 
+      (sep < 6*lambda) "Sourcedrain active must be at least 6 from well edge (Mosis 2.3)"
+    ) 
+    (drc Pwell nsource 
+      (enc < 6*lambda) "Sourcedrain active must be at least 6 from well edge (Mosis 2.3)"
+    ) 
+
+    (nwcont = (geomAnd (geomAnd Active Nselect) Nwell)) 
+    (pwcont = (geomAndNot (geomAnd Active Pselect) Nwell)) 
+
+    (drc Nwell nwcont 
+      (enc < 3*lambda) "Well contact must be at least 3 from well edge (Mosis 2.4)"
+    ) 
+    (drc pwcont Nwell 
+      (sep < 3*lambda) "Substrate contact must be at least 3 from well edge (Mosis 2.4)"
+    ) 
+
+; geomSizeInTub abstracts each plug to a single point. This is
+; inaccurate for large plugs, so convert large plugs to many
+; smaller ones.
+    (ivIf
+      (switch "do_tubcheck") then
+      (nwc = (geomAnd nwcont ActX))
+      (nwcont_rad = geomSizeInTub(nwc Nwell1 100*lambda 10*lambda))
+      (pwc = (geomAnd pwcont ActX))
+      (pwcont_rad = geomSizeInTub(pwc Pwell  100*lambda 10*lambda))
+      (nwc1 = (geomAndNot pgate nwcont_rad))
+      (saveDerived nwc1 "PFet is too far from nwell plug (> 100 lambda)")
+      (pwc1 = (geomAndNot ngate pwcont_rad))
+      (saveDerived pwc1 "NFet is too far from substrate plug (> 100 lambda)")
+    )
+
+; POLY1 (MOSIS 3.X)
+    (drc Poly1 
+      (width < 2*lambda) "Poly1 width must be at least 2 (Mosis 3.1)"
+    )
+    (drc Poly1 
+      (sep < 2*lambda) "Poly1 separation must be at least 2 (Mosis 3.2)"
+    ) 
+    (drc Poly1
+      (0 < notch < 3*lambda) "Poly separation must be at least 3 (Mosis 3.2)"
+    )
+    (drc Poly1 Active 
+      (enc < 2*lambda) "Poly1 must overhang transistor by at least 2 (Mosis 3.3)"
+    ) 
+    (drc Active Poly1 
+      (enc < 3*lambda) "Active overlap of gate must be at least 3 (Mosis 3.4)"
+    ) 
+    (drc Poly1 Active 
+      (sep < 1*lambda) "Poly1 separation to Active must be at least 1 (Mosis 3.5)"
+    ) 
+
+; SELECT (MOSIS 4.X)
+    (select = (geomOr Pselect Nselect Pbase)) 
+    (drc gate pwcont 
+      (sep < 3*lambda) "PSelect must be at least 3 from ngate (Mosis 4.1)"
+    )
+    (drc gate nwcont 
+      (sep < 3*lambda) "NSelect must be at least 3 from pgate (Mosis 4.1)"
+    ) 
+
+    ; the following caused problems
+    ;(S3 = (geomGetEdge Poly1 inside PActive)) 
+    ;(drc Pselect S3 
+    ;  (enc < 3*lambda) "Drain/source must extend at least 3 from gate (Mosis 4.1)"
+    ;) 
+    ;(drc Nselect S3 
+    ;  (enc < 3*lambda) "Drain/source must extend at least 3 from gate (Mosis 4.1)"
+    ;) 
+    ; end caused problems
+
+    (ActnSel = (geomAndNot NotCCD select)) 
+    (saveDerived ActnSel "Active must be enclosed by select (Mosis 4.2)")
+    (drc select Active 
+      (enc < 2*lambda) "Select must overlap Active by at least 2 (Mosis 4.2)"
+    ) 
+    (rule4\.3 = (geomAnd 
+             (geomOr 
+               (geomSize Nselect 1*lambda edges) 
+               (geomSize Nselect -1*lambda edges)
+               (geomSize Pselect 1*lambda edges)
+               (geomSize Pselect -1*lambda edges)
+             ) ActX
+          )
+    ) 
+    (saveDerived rule4\.3 "Active contacts should be at least 1 from a select edge (Mosis 4.3)")
+
+    (drc Nselect 
+      (width < 2*lambda) "Minimum select width is 2 (Mosis 4.4)"
+    ) 
+    (drc Pselect 
+      (width < 2*lambda) "Minimum select width is 2 (Mosis 4.4)"
+    )
+    (drc Nselect 
+      (sep < 2*lambda) "Minimum separation between similar select is 2 (Mosis 4.4)"
+    ) 
+    (drc Pselect 
+      (sep < 2*lambda) "Minimum separation between similar select is 2 (Mosis 4.4)"
+    ) 
+    (drc Nselect
+      (0 < notch < 2*lambda) "Minimum separation between similar select is 2 (Mosis 4.4)"
+    )
+    (drc Pselect
+      (0 < notch < 2*lambda) "Minimum separation between similar select is 2 (Mosis 4.4)"
+    )
+    (rule4.\4 = (geomAnd Nselect Pselect))
+    (saveDerived rule4.\4 "Nselect and Pselect may not overlap (Mosis 4.4)") 
+
+; not explicit in Mosis rules, but correct!
+    (ngateNwell  = (geomAnd ngate Nwell)) 
+    (pgatenNwell = (geomAndNot pgate Nwell)) 
+    (drc ngateNwell
+      (0 < area) "Pmos transistor requires Pselect, not Nselect"
+    ) 
+    (drc pgatenNwell
+      (0 < area) "Nmos transistor requires Nselect, not Pselect"
+    ) 
+; end not explicit
+
+
+; ?? NOT NECESSARY ??
+    (selnwell = (geomAnd Nwell select)) 
+    (selpwell = (geomAnd Pwell select))
+
+    (drc selnwell selpwell 
+      (sep < 1*lambda) "Select can not extend beyond well"
+    ) 
+    (drc Nwell Nselect 
+      (enc < 1*lambda) "Nwell must enclose Nselect by 1"
+    ) 
+    (drc Nwell Pselect 
+      (enc < 2*lambda) "Nwell must enclose Pselect by 2"
+    ) 
+    (drc Pwell Pselect 
+      (enc < 1*lambda) "Pwell must enclose Pselect by 1"
+    ) 
+    (drc Pwell Nselect 
+      (enc < 2*lambda) "Pwell must enclose Nselect by 2"
+    )
+; ?? END NOT NECESSARY ??
+
+; POLY1 CONTACT (MOSIS 5.X)
+    (drc P1Con 
+      (width < 2*lambda) "Contacts must be 2x2 (Mosis 5.1)"
+    ) 
+    (drc P1Con 
+      (4*lambda*lambda < area) "Contacts must be 2x2 (Mosis 5.1)"
+    ) 
+
+    (rule5b\.2 = (geomOr 
+		   (geomAndNot P1Con Poly1) 
+		   ;(drc P1Con (geomAndNot bkgnd Poly1) (sep < 1*lambda))
+                   (drc Poly1 P1Con (enc < 1*lambda))
+		   (geomGetEdge P1Con coincident Poly1)
+                 )
+    )
+    (saveDerived rule5b\.2 "Poly1 must overlap Poly1 contact by at least 1 (Mosis 5.2.b)") 
+
+    (drc P1Con 
+      (sep < 3*lambda) "All Poly1 contacts must be at least 3 apart (Mosis 5.3)"
+    ) 
+    (drc P1Con Poly1wire 
+      (sep < 5*lambda) diffNet "Poly1 contact to other Poly1 must be at least 5 (Mosis 5.5.b)"
+    ) 
+    (drc P1Con Active 
+      (sep < 2*lambda) "Single Poly1 contact to Active spacing must be at least 2 (Mosis 5.6.b)"
+    )
+
+    ; ?? is this good?
+    (PC1 = (drc P1Con (sep < 3*lambda) sameNet)) 
+    (drc Active PC1 
+      (sep < 3*lambda) "Many Poly1 contacts to Active spacing must be at least 3 (Mosis 5.7.b)"
+    ) 
+
+
+; ACTIVE CONTACT (MOSIS 6.X)
+    (drc ActX 
+      (width < 2*lambda) "Contacts must be 2x2 (Mosis 6.1)"
+    ) 
+    (drc ActX 
+      (4*lambda*lambda < area) "Contacts must be 2x2 (Mosis 6.1)"
+    ) 
+    (rule6b\.2 = (geomOr 
+                   (geomAndNot ActX Active1) 
+	   (drc ActX (geomAndNot bkgnd Active) (sep < 1*lambda))
+                   (drc Active ActX (enc < 1*lambda))
+  		   (geomGetEdge ActX coincident Active)
+                 )
+    ) 
+    (saveDerived rule6b\.2 "Active overlap of Active contact must be at least 1 (Mosis 6.2.b)") 
+
+    (drc ActX 
+      (sep < 3*lambda) "Active contacts must be separated by at least 3 (Mosis 6.3)"
+    )
+
+    (drc ActX gate 
+      (sep < 2*lambda) "Active contact to gate must be at least 2 (Mosis 6.4)"
+    ) 
+
+    (saveDerived 
+      (geomOutside (drc ActX NSD (sep < 5*lambda) diffNet) gate) 
+      "Active contact to different Active must be at least 5 (Mosis 6.5.b)"
+    ) 
+    (saveDerived 
+      (geomOutside (drc ActX PSD (sep < 5*lambda) diffNet) gate)
+      "Active contact to different Active must be at least 5 (Mosis 6.5.b)"
+    ) 
+
+    (fpoly = (geomAndNot Poly1 gate))
+    (drc ActX fpoly 
+      (sep < 2*lambda) "Active contact to Poly1 spacing must be at least 2 (Mosis 6.6.b)"
+    ) 
+
+    ; ?? is this good?
+    (ActXMany = (drc ActX (sep < 3*lambda) sameNet)) 
+    (drc fpoly ActXMany
+      (sep < 3*lambda) "Many Active contacts to field poly must be at least 3 (Mosis 6.7.b)"
+    ) 
+
+    (rule6b\.8 = (geomOr 
+                   (geomAnd ActX P1Con) 
+                   (drc ActX P1Con (sep < (4*lambda)))
+                   (geomGetEdge ActX butting P1Con)
+                 )
+    ) 
+    (saveDerived rule6b\.8 "Active contact to Poly1 contact must be at least 4 (Mosis 6.8.b)")
+
+; METAL1 (MOSIS 7.X)
+    (drc Metal1 
+      (width < 3*lambda) "Metal1 width must be at least 3 (Mosis 7.1)"
+    ) 
+    (drc Metal1 
+      (sep < 3*lambda) "Metal1 separation must be at least 3 (Mosis 7.2)"
+    )
+    (drc Metal1
+      (0 < notch < 3*lambda) "Metal1 separation must be at least 3 (Mosis 7.2)"
+    )
+
+    (rule7\.30 = (geomOr 
+                  (geomAndNot P1Con Metal1) 
+                  ;(drc P1Con (geomAndNot bkgnd Metal1) (sep < 1*lambda))
+                  (drc Metal1 P1Con (enc < 1*lambda))
+                  (geomGetEdge P1Con coincident Metal1)
+                )
+    ) 
+    (saveDerived rule7\.30 "Metal 1 must overlap Poly1 contact by at least 1 (Mosis 7.3)") 
+    (rule7\.31 = (geomOr 
+                  (geomAndNot P2Con Metal1) 
+                  ;(drc P2Con (geomAndNot bkgnd Metal1) (sep < 1*lambda))
+                  (drc Metal1 P2Con (enc < 1*lambda))
+		  (geomGetEdge P2Con coincident Metal1)
+                )
+    ) 
+    (saveDerived rule7\.31 "Metal 1 must overlap Poly2 contact by at least 1 (Mosis 7.3)") 
+    (rule7\.32 = (geomOr 
+                  (geomAndNot ActX Metal1) 
+                  ;(drc ActX (geomAndNot bkgnd Metal1) (sep < 1*lambda))
+                  (drc Metal1 ActX (enc < 1*lambda))
+		  (geomGetEdge ActX coincident Metal1)
+                )
+    ) 
+    (saveDerived rule7\.32 "Metal 1 must overlap Active contact by at least 1 (Mosis 7.3)") 
+
+    ; WideMetal is all metal wider than 10 lambda
+    ;   the 'shielded' modifier prevents errors from occurring
+    ;   between WideMetal and thin Metal if there is thin Metal in between
+    WideMetal1 = geomSize( geomSize(Metal1 -5*lambda) 5*lambda)
+    ThinMetal1 = geomAndNot( Metal1 WideMetal1)
+    (rule7\.4 = 
+      (geomOr
+        (geomAndNot
+          (drc 
+            geomOr(WideMetal1 geomAnd(geomSize(WideMetal1 6*lambda) ThinMetal1))
+            (sep < 6*lambda) 
+          )
+          Metal1
+        )
+        (geomAndNot
+          (drc 
+            geomOr(WideMetal1 geomAnd(geomSize(WideMetal1 6*lambda) ThinMetal1))
+            (notch < 6*lambda) 
+          )
+          Metal1
+        )
+      )
+    )
+    (saveDerived rule7\.4 "Metal1 over 10 lambda wide, separation must be at least 6 (Mosis 7.4)")
+    (drc WideMetal1 ThinMetal1
+      (0 < sep < 6*lambda) opposite shielded
+      "Metal1 over 10 lambda wide, separation must be at least 6 (Mosis 7.4)"
+    )
+
+; VIA (MOSIS 8.X)
+    (V1 = (geomOutside Via Glass))
+
+    (drc V1 
+      (width < 2*lambda) "Via must be 2x2 (Mosis 8.1)"
+    ) 
+    (drc V1 
+      (4*lambda*lambda < area) "Via must be 2x2 (Mosis 8.1)"
+    ) 
+    (drc V1 
+      (sep < 3*lambda) "Via separation < 3 (Mosis 8.2)"
+    ) 
+    (rule8\.3 = (geomOr 
+                  (geomAndNot V1 Metal1) 
+                  ;(drc V1 (geomAndNot bkgnd Metal1) (sep < 1*lambda))
+                  (drc Metal1 V1 (enc < 1*lambda))
+                  (geomGetEdge V1 coincident Metal1)
+                )
+    ) 
+    (saveDerived rule8\.3 "Metal1 overlap of Via must be at least 1 (Mosis 8.3)")
+
+; MOSIS SCMOS rules 8.4 and 8.5 are waived for stacked processes including AMI05 SCN3ME. -Honghao 07/10/2004
+
+;    (if !hasStackVia then
+;      (drc V1 (geomOr ActX P1Con P2Con)
+;        (sep < 2) "Via must be at least 2 from all other contacts (Mosis 8.4)"
+;      ) 
+;      (V1Con = (geomAnd V1 (geomOr ActX P1Con P2Con))) 
+;      (saveDerived V1Con "Via stacked over other contact not allowed (Mosis 8.4)") 
+;    ) ;if !hasStackVia
+;
+;    (V1Poly1 = (geomAnd V1 Poly1)) 
+;    (V1Poly2 = (geomAnd V1 Poly2)) 
+;    (V1Active = (geomAnd V1 Active)) 
+;    (V1nPoly1 = (geomAndNot V1 Poly1)) 
+;    (V1nPoly2 = (geomAndNot V1 Poly2)) 
+;    (V1nActive = (geomAndNot V1 Active)) 
+;    (rule8\.50 = (geomOr 
+;                   (drc V1 Poly1 (sep < 2)) 
+;                   (drc V1 (geomAndNot bkgnd Poly1) (sep < 2))
+;                   ;(drc Poly1 V1 (enc < 2))
+;                   (geomGetEdge V1 coincident Poly1)
+;                   (geomGetEdge V1 butting Poly1)
+;                   (geomGetEdge V1Poly1 butting V1nPoly1)
+;                 )
+;    )
+;    (saveDerived rule8\.50 "Via < 2 from Poly1 edge (Mosis 8.5)") 
+;    (rule8\.51 = (geomOr 
+;                   (drc V1 Poly2 (sep < 2)) 
+;                   (drc V1 (geomAndNot bkgnd Poly2) (sep < 2))
+;                   ;(drc Poly2 V1 (enc < 2))
+;                   (geomGetEdge V1 coincident Poly2)
+;                   (geomGetEdge V1 butting Poly2)
+;                   (geomGetEdge V1Poly2 butting V1nPoly2)
+;                 )
+;    )
+;    (saveDerived rule8\.51 "Via < 2 from Poly2 edge (Mosis 8.5)") 
+;    (rule8\.52 = (geomOr 
+;                   (drc V1 Active (sep < 2)) 
+;                   (drc V1 (geomAndNot bkgnd Active) (sep < 2))
+;                   ;(drc Active V1 (enc < 2))
+;                  (geomGetEdge V1 coincident Active)
+;                   (geomGetEdge V1 butting Active)
+;                   (geomGetEdge V1Active butting V1nActive)
+;                 )
+;    ) 
+;    (saveDerived rule8\.52 "Via < 2 from Active edge (Mosis 8.5)") 
+
+; METAL2 (MOSIS 9.X)
+    (drc Metal2 
+      (width < 3*lambda) "Metal2 width must be at least 3 (Mosis 9.1)"
+    ) 
+    (drc Metal2 
+      (sep < 3*lambda) "Metal2 separation must be at least 3 (Mosis 9.2)"
+    ) 
+    (drc Metal2
+      (0 < notch < 3*lambda) "Metal2 separation must be at least 3 (Mosis 9.2)"        
+    )
+
+    (rule9\.3 = (geomOr 
+                  (geomAndNot Via Metal2) 
+                  ;(drc Via (geomAndNot bkgnd Metal2) (sep < 1*lambda))
+                  (drc Metal2 Via (enc < 1*lambda))
+                  (geomGetEdge Via coincident Metal2)
+                )
+    )
+    (saveDerived rule9\.3 "Metal2 overlap of Via must be at least 1 (Mosis 9.3)") 
+
+    ; WideMetal is all metal wider than 10 lambda
+    ;   the 'shielded' modifier prevents errors from occurring
+    ;   between WideMetal and thin Metal if there is thin Metal in-between
+    WideMetal2 = geomSize( geomSize(Metal2 -5*lambda) 5*lambda)
+    ThinMetal2 = geomAndNot( Metal2 WideMetal2)
+    (rule9\.4 = 
+      (geomOr
+        (geomAndNot
+          (drc 
+            geomOr(WideMetal2 geomAnd(geomSize(WideMetal2 6*lambda) ThinMetal2))
+            (sep < 6*lambda) 
+          )
+          Metal2
+        )
+        (geomAndNot
+          (drc 
+            geomOr(WideMetal2 geomAnd(geomSize(WideMetal2 6*lambda) ThinMetal2))
+            (notch < 6*lambda) 
+          )
+          Metal2
+        )
+      )
+    )
+    (saveDerived rule9\.4 "Metal2 over 10 lambda wide, separation must be at least 6 (Mosis 9.4)")
+    (drc WideMetal2 ThinMetal2
+      (0 < sep < 6*lambda) opposite shielded
+      "Metal2 over 10 lambda wide, separation must be at least 6 (Mosis 9.4)"
+    )
+
+; POLY2 (MOSIS 11.X, MOSIS 12.X)
+    (P2P1 = (geomAnd Poly1 Poly2)) 
+    (P2nP1 = (geomAndNot Poly2 Poly1)) 
+
+    (drc P2P1
+      (width < 7*lambda) "Poly2 width for cap must be at least 7 (Mosis 11.1)"
+    )
+    (drc Poly2 
+      (sep < 3*lambda) "Poly2 separation must be at least 3 (Mosis 11.2,12.2)"
+    ) 
+    (drc Poly2
+      (0 < notch < 3*lambda) "Poly2 separation must be at least 3 (Mosis 11.2,12.2)"
+    )
+    (drc Poly1 Poly2 
+      (enc < 5*lambda) "Poly1 must enclose Poly2 by at least 5 (Mosis 11.3)"
+    ) 
+    (drc P2P1 Active 
+      (sep < 2*lambda) "Poly2 to Active edge must be at least 2 (Mosis 11.4)"
+    )
+    (drc P2P1 Nwell
+      (sep < 2*lambda) "Poly2 to Well edge must be at least 2 (Mosis 11.4)"
+    )
+    (drc P2P1 Nwell
+      (enc < 2*lambda) "Poly2 to Well edge must be at least 2 (Mosis 11.4)"
+    )
+    (drc Poly2 P1Con
+      (sep < 6*lambda) "Poly2 separation to Poly1 contact must be at least 6 (Mosis 11.5,12.6)"
+    )
+    (rule11\.5 = (geomAnd Poly2 P1Con))
+    (saveDerived rule11\.5 "Poly2 cannot overlap Poly1 contact (Mosis 11.5,12.6)") 
+
+    (if !hasStackVia then
+      (drc Poly2 Metal1
+        (sep < 2*lambda) diffNet "Poly2 to unrelated Metal1 must be at least 2 (Mosis 11.6)"
+      )
+    ) ;if !hasStackVia
+
+    (drc P2nP1 
+      (width < 2*lambda) "Poly2 width must be at least 2 (Mosis 12.1)"
+    )
+    (drc Poly2 P2Active 
+      (enc < 2*lambda) "Poly2 must overhang transistor by at least 2 (Mosis 12.3)"
+    ) 
+    (drc P2nP1 Active 
+      (sep < 1*lambda) "Poly2 separation to Active must be at least 1 (Mosis 12.4)"
+    )
+    (drc Poly1 Poly2 
+      (sep < 2*lambda) "Poly1, Poly2 separation must be at least 2 (Mosis 12.5)"
+    )
+    (drc Poly1 Poly2 
+      (ovlp < 2*lambda) "Poly1, Poly2 overlap must be at least 2 (Mosis 12.5)"
+    )
+    (drc Poly2 ActX
+      (sep < 3*lambda) "Poly2 separation to Active contact must be at least 3 (Mosis 12.6)"
+    )
+
+    (drc P2Active Poly2 
+      (enc < 3*lambda) "Active overlap of Poly2 gate must be at least 3 (Mosis ?.?)"
+    ) 
+
+; investigate 11.6??
+
+; POLY2 CONTACT (MOSIS 13.X)
+    (drc P2Con 
+      (width < 2*lambda) "Contacts must be 2x2 (Mosis 13.1)"
+    ) 
+    (drc P2Con 
+      (4*lambda*lambda < area) "Contacts must be 2x2 (Mosis 13.1)"
+    ) 
+    (drc P2Con 
+      (sep < 3*lambda) "Poly2 contact spacing must be at least 3 (Mosis 13.2)"
+    ) 
+    (rule13\.3 = (geomOr 
+                    ;(drc P2Con (geomAndNot bkgnd P2P1) (sep < 3*lambda))
+                    (drc P2P1 P2Con (enc < 3*lambda))
+                    (geomGetEdge P2Con coincident P2P1)
+                  )
+    )
+    (saveDerived rule13\.3 "Poly2 must overlap Poly2 contact by at least 3 over Poly1 (Mosis 13.3)") 
+    (rule13\.4 = (geomOr 
+                    (geomAndNot P2Con Poly2) 
+                    ;(drc P2Con (geomAndNot bkgnd P2nP1) (sep < 2*lambda))
+                    (drc P2nP1 P2Con (enc < 2*lambda))
+                    (geomGetEdge P2Con coincident P2nP1)
+                  )
+    )
+    (saveDerived rule13\.4 "Poly2 must overlap Poly2 contact by at least 2 (Mosis 13.4)") 
+
+    (drc P2Con Active 
+      (sep < 3*lambda) "Poly2 contact to Active spacing must be at least 3 (Mosis 13.5)"
+    )
+    (drc P2Con Poly1
+      (sep < 3*lambda) "Poly2 contact to Poly1 spacing must be at least 3 (Mosis 13.5)"
+    )
+
+; VIA2 (MOSIS 14.X) (HP0.5 and AMI0.5)
+    (VV2 = (geomOutside Via2 Glass))
+    (drc VV2
+      (width < 2*lambda) "Via2 must be 2 X 2 (Mosis 14.1)"
+    )
+    (drc VV2
+      (4*lambda*lambda < area) "Via2 must be 2 X 2 (Mosis 14.1)"
+    )
+    (drc VV2
+      (sep < 3*lambda) "Via2-to-Via2 separation must be at least 3 (Mosis 14.2)"
+    )
+    (rule14\.3 = (geomOr
+                  (geomAndNot VV2 Metal2)
+                  ;(drc VV2 (geomAndNot bkgnd Metal2) (sep < 1*lambda))
+                  (drc Metal2 VV2 (enc < 1*lambda))
+                  (geomGetEdge VV2 coincident Metal2)
+                )
+    )
+    (saveDerived rule14\.3 "Metal2 overlap of Via2 must be at least 1 (Mosis 14.3)")
+
+    (if !hasStackVia then
+      (drc VV2 V1
+        (sep < 2*lambda) "Via2 must be at least 2 from Via (Mosis 14.4)"
+      )
+      (VV3 = (geomAnd VV2 V1))
+      (saveDerived VV3 "Via2 stacked over Via not allowed (Mosis 14.4)")
+    ) ;if !hasStackVia
+
+; METAL3 (MOSIS 15.X) (HP0.5 and AMI0.5)
+    (drc Metal3
+      (width < 5*lambda) "Metal3 width must be at least 5 (Mosis 15.1)"
+    )
+    (drc Metal3
+      (sep < 3*lambda) "Metal3 separation must be at least 3 (Mosis 15.2)"
+    )
+    (drc Metal3
+      (0 < notch < 4*lambda) "Metal3 separation must be at least 4 (Mosis 15.2)"
+    )
+    (rule15\.3 = (geomOr
+                   (geomAndNot VV2 Metal3)
+                   ;(drc VV2 (geomAndNot bkgnd Metal3) (sep < 2*lambda))
+                   (drc Metal3 VV2 (enc < 2*lambda))
+                   (geomGetEdge VV2 coincident Metal3)
+                 )
+    )
+    (saveDerived rule15\.3 "Metal3 overlap of Via2 must be at least 2 (Mosis 15.3)")
+
+    ; WideMetal is all metal wider than 10 lambda
+    ;   the 'shielded' modifier prevents errors from occurring
+    ;   between WideMetal and thin Metal if there is thin Metal in-between
+    WideMetal3 = geomSize( geomSize(Metal3 -5) 5)
+    ThinMetal3 = geomAndNot( Metal3 WideMetal3)
+    (rule15\.4 = 
+      (geomOr
+        (geomAndNot
+          (drc 
+            geomOr(WideMetal3 geomAnd(geomSize(WideMetal3 6*lambda) ThinMetal3))
+            (sep < 6*lambda) 
+          )
+          Metal3
+        )
+        (geomAndNot
+          (drc 
+            geomOr(WideMetal3 geomAnd(geomSize(WideMetal3 6*lambda) ThinMetal3))
+            (notch < 6*lambda) 
+          )
+          Metal3
+        )
+      )
+    )
+    (saveDerived rule15\.4 "Metal3 over 10 lambda wide, separation must be at least 6 (Mosis 15.4)")
+    (drc WideMetal3 ThinMetal3
+      (0 < sep < 6*lambda) opposite shielded
+      "Metal3 over 10 lambda wide, separation must be at least 6 (Mosis 15.4)"
+    )
+
+; BJT (MOSIS 16.X)
+    (emitter = (geomAnd Pbase Nselect)) 
+    (emc = (geomAnd ActX emitter))
+    (base1 = (geomAnd Pbase Pselect)) 
+    (bc = (geomAnd ActX base1)) 
+    (drc emitter emc 
+      (enc < 3*lambda) "Emitter select must overlap contact by 3 (Mosis 16.2)"
+    ) 
+    (drc Pbase emitter 
+      (enc < 2*lambda) "Pbase must overlap emitter select by 2 (Mosis 16.3)"
+    ) 
+    (drc base1 emitter 
+      (sep < 4*lambda) "Base and Emitter selects must be 4 apart (Mosis 16.4)"
+    )
+    (drc Pbase base1 
+      (enc < 2*lambda) "Pbase must overlap base select by 2 (Mosis 16.5)"
+    ) 
+    (drc base1 bc 
+      (enc < 2*lambda) "Base select must overlap contact by 2 (Mosis 16.6)"
+    ) 
+    (drc Nwell Pbase 
+      (enc < 6*lambda) "Nwell must overlap Pbase by 6 (Mosis 16.7)"
+    ) 
+    (drc Pbase NTap 
+      (sep < 4*lambda) "Pbase and collector active must be 4 apart (Mosis 16.8)"
+    ) 
+    (rpbase = (geomAnd Active Pbase))
+    (drc rpbase 
+      (0 < area) "Active must not be placed in Pbase"
+    ) 
+
+; CAPWELL (MOSIS 17.X 18.X)
+    (drc CapWell
+      (width < 12*lambda) "CapWell width must be at least 12 (Mosis 17.1)"
+    )
+    (drc CapWell
+      (sep < 18*lambda) " CapWell seperation must be at least 18 (Mosis 17.2)"
+    )
+    (drc CapWell Nwell
+      (sep < 9*lambda) " CapWell to Nwell spacing must be at least 9 (Mosis 17.2)"
+    )
+    (ActOutCap = geomOutside(Active CapWell))
+    (drc CapWell ActOutCap
+      (sep < 6*lambda) "CapWell spacing to external Active must be at least 6 (Mosis 17.3)"
+    )
+    (ActInCap = (geomAnd CapWell Active))
+    (drc CapWell ActInCap
+      (enc < 6*lambda) "Active must be at least 6 from CapWell edge (Mosis 17.4)"
+    )
+    (ruleWeMadeUp = (geomAnd CapWell Pselect))
+    (saveDerived ruleWeMadeUp "Shouldn't use PSelect in CapWell")
+    (drc Capgate
+      (width < 3*lambda) "Capacitor width must be at least 3 (Mosis 18.1)"
+    )
+    (drc ActX Capgate
+      (sep < 6*lambda) "Active contact in CapWell to Poly1 spacing must be at least 6 (Mosis 18.5)"
+    )
+
+; MAC added switch (switch on "no_padcheck" to skip pad/glass rules)
+(ivIf (!(switch "no_padcheck")) then
+
+; GLASS (PADS) (MOSIS 10.X)
+    (ivIf (switch "AMI12") then 
+      (GP1 = (geomStretch Glass 10*lambda)) 
+      (GP2 = (geomSize GP1 10*lambda edges))
+      (pad = (geomAnd (geomOr GP2 Glass) Metal2)) 
+    )
+    (ivIf ((switch "HP05") || (switch "AMI05") || (switch "AMI05_SUBM")) then
+      (GP1 = (geomAnd Glass (geomAnd Metal2 Metal3)))
+      (GP2 = geomSize(Glass 6.1)) ; '6.1' avoids rounding errors below
+      (pad = (geomAnd (geomOr GP2 Glass) Metal3))
+    )
+    (Bpad = (geomStraddle pad XP))
+    (Ppad = (geomOutside pad XP))
+
+    (ivIf (switch "AMI12") then
+      (rule10\.a = (geomOr 
+		     (geomOutside pad Via) 
+		     (geomOutside pad Metal1)
+		     (geomOutside pad Metal2)
+                   )
+      ) 
+      (saveDerived rule10\.a "You should put Metal1, Metal2, and Via under your pads") 
+      (rule10\.c = (geomGetEdge Via coincident pad)) 
+      (saveDerived rule10\.c "Via in a pad should be completely enclosed by the pad") 
+      (rule10\.d = (geomAndNot XP Glass)) 
+      (saveDerived rule10\.d "Do not let bonding layer XP extend outside of Glass") 
+      (rule10\.e = (geomAndNot Glass Via))
+      (saveDerived rule10\.e "Via should completely cover the pad's Glass") 
+      (drc (geomAnd Glass Bpad) 
+        (width < 146.66*lambda) "Let bonding pad Glass be at least 88um x 88um"
+      ) 
+      (drc (geomAnd Glass Ppad) 
+        (width < 105*lambda) "Let probe pad Glass be at least 63um x 63um"
+      )
+      (drc (geomAnd Via Bpad) 
+        (width < 146.66*lambda) "Let the Via under bonding pad Glass be at least 88um x 88um"
+      ) 
+      (drc (geomAnd Via Ppad) 
+        (width < 105*lambda) "Let the Via under probe pad Glass be at least 63um x 63um"
+      ) 
+    ) ; end ivIf(switch "AMI12")
+
+    (ivIf ((switch "HP05") || (switch "AMI05") || (switch "AMI05_SUBM")) then
+      (rule10\.a1 = (geomAnd Glass Via))
+      (saveDerived rule10\.a1 "Via not allowed under Glass")
+      (rule10\.a2 = (geomAnd Glass Via2))
+      (saveDerived rule10\.a2 "Via2 not allowed under Glass")
+      (BpadOpen = (geomInside GP1 Bpad))
+      (drc BpadOpen
+        (width < 60) "Let bonding pad Glass be at least 60um x 60um"
+      )
+      (PpadOpen = (geomInside GP1 Ppad))
+      (drc PpadOpen
+        (width < 60) "Let probe pad Glass be at least 60um x 60um)"
+      )
+    ) ; end ivIf ((switch "HP05") || (switch "AMI05") || (switch "AMI05_SUBM"))
+
+; common bonding rules
+    (rule10\.b = (geomOr
+                   (geomAndNot Glass pad)
+                   (geomGetEdge Glass coincident pad)
+                 )
+    )
+    (saveDerived rule10\.b "Glass must be completely enclosed by pad")
+    (drc Bpad
+      (sep < 75) "Should seperate bonding pads by at least 75um)"
+    )
+    (drc (geomAndNot pad Glass)
+      (width < 6) "Pad overlap of Glass must be at least 6um (Mosis 10.3)"
+    )
+    (drc XP
+      (width < 70) "Bonding layer XP must be at least 70um x 70um"
+    )
+    (drc Ppad
+      (sep < 75) "Should separate probe pads by at least 75um"
+    )
+   ; (drc Glass
+   ;   (sep < 75) "Should separate Glass cuts by at least 75um"
+   ; )        --- Commented out by Honghao on Nov. 28, 2004 after checking the pad rule on Mosis web site.
+    (drc pad Metal1
+      (sep < 30) "Pad to Metal1 separation must be at least 30um (Mosis 10.4)"
+    )
+    (drc pad Metal2
+      (sep < 30) "Pad to Metal2 separation must be at least 30um (Mosis 10.4)"
+    )
+    (drc pad Metal3
+      (sep < 30) "Pad to Metal3 separation must be at least 30um (Mosis 10.4)"
+    )
+    (drc pad Poly1
+      (sep < 15) "Pad to Poly1 seperation must be at least 15um (Mosis 10.5)"
+    )
+    (drc pad Poly2
+      (sep < 15) "Pad to Poly2 seperation must be at least 15um (Mosis 10.5)"
+    )
+    (drc pad Active
+      (sep < 15) "Pad to Active seperation must be at least 15um (Mosis 10.5)"
+    )
+) ;ivIf (!(switch "no_padcheck"))
+
+; SILICIDE BLOCK (MOSIS 20.X)
+    (drc SiBlock
+      (width < 4*lambda) "Silicide_Block width must be at least 4 (Mosis 20.1)"
+    )
+    (drc SiBlock
+      (sep < 4*lambda) "Silicide_Block seperation must be at least 4 (Mosis 20.2)"
+    )
+    (AllContacts = (geomOr ActX (geomOr P1Con P2Con)))
+    (rule20\.3a = (geomAnd SiBlock AllContacts ))
+    (saveDerived rule20\.3a "Contacts (Active, P1, P2) not allowed in Silicide_Block (Mosis 20.3)")
+    (drc SiBlock AllContacts
+      (sep < 2*lambda) "Silicide_Block space to contacts (Active, P1, P2) must be at least 2 (Mosis 20.3)"
+    )
+    (drc SiBlock (geomOutside Active SiBlock)
+      (sep < 2*lambda) "Silicide_Block spacing to outside Active must be at least 2 (Mosis 20.4)"
+    )
+    (drc SiBlock (geomOutside Poly1 SiBlock)
+      (sep < 2*lambda) "Silicide_Block spacing to outside Poly1 must be at least 2 (Mosis 20.5)"
+    )
+    (NotinSiBlock= (geomOr Active Nwell))
+    ; THIS SEEMS TO BE BAD, RP 2.26.01
+    (rule20\.6 = (geomAnd SiBlock NotinSiBlock))  
+    (saveDerived rule20\.6 "Poly resistors must not be over well or Active (Mosis 20.6)")
+    (SiBlock_resA = (geomAnd SiBlock Poly1))
+    (SiBlock_res = (geomAndNot SiBlock_resA (geomStraddle SiBlock_resA Active)))
+    (drc SiBlock_res
+      (width < 5*lambda) "Poly1 resistor width must be at least 5 (Mosis Rule 20.7)"
+    )
+    (drc SiBlock_res
+      (sep < 7*lambda) "Poly1 resistor spacing must be at least 7 (Mosis Rule 20.8)"
+    )
+    (drc SiBlock_res
+      (0 < notch < 7*lambda) "Poly1 resistor spacing must be at least 7 (Mosis Rule 20.8)"
+    )
+    (drc SiBlock Poly1
+      (enc < 2*lambda) "Silicide_Block overlap of poly1 resistor must be at least 2 (Mosis Rule 20.9)"
+    )
+        
+    ; ADDED by RP 2.26.01 **NOT TESTED**
+    ;(SiBA1 = (geomAnd SiBlock Active))
+    ;(AP1 = (geomAnd Active Poly1))
+    ;(drc SiBA1 AP1   ;THIS ONE IS SUSPECT, RP 2.26.01
+    ;(sep < 3) "Poly spacing to Silicide_Block must be at least 3 inside same active (Mosis Rule 20.11)"
+    ;)
+        
+; HIGH RES IMPLANT (HR) (MOSIS 27.X) ADDED BY RP ON 2.26.01 FOR AMI 0.5
+    (drc HR
+      (width < 4*lambda) "HR width must be at least 4 (Mosis 27.1)"
+    )
+    (drc HR
+      (sep < 4*lambda) "HR seperation must be at least 4 (Mosis 27.2)"
+    )
+    (AllContacts = (geomOr ActX (geomOr P1Con P2Con)))
+    (rule27\.3a = (geomAnd HR AllContacts ))
+    (saveDerived rule27\.3a "Contacts (Active, P1, P2) not allowed in HR (Mosis 27.3)")
+    (drc HR AllContacts
+      (sep < 2*lambda) "HR space to contacts (Active, P1, P2) must be at least 2 (Mosis 27.3)"
+    )
+    (drc HR (geomOutside Active HR)
+      (sep < 2*lambda) "HR spacing to external Active must be at least 2 (Mosis 27.4)"
+    )
+    (drc HR (geomOutside Poly2 HR)
+      (sep < 2*lambda) "HR spacing to outside Poly2 must be at least 2 (Mosis 27.5)"
+    )
+    (NotinHR= (geomOr Active Nwell))
+    (rule27\.6 = (geomAnd HR NotinHR))
+    (saveDerived rule27\.6 "HR Poly2 resistors must not be over well or Active (over field) (Mosis 27.6)")
+    (HR_resA = (geomAnd HR Poly2))
+    (HR_res = (geomAndNot HR_resA (geomStraddle HR_resA Active)))
+    (drc HR_res
+      (width < 5*lambda) "HR Poly2 resistor width must be at least 5 (Mosis Rule 27.7)"
+    )
+    (drc HR_res
+      (sep < 7*lambda) "HR Poly2 resistor spacing (inside same HR) must be at least 7 (Mosis Rule 27.8)"
+    )
+    (drc HR_res
+      (0 < notch < 7*lambda) "HR Poly2 resistor spacing must be at least 7 (Mosis Rule 27.8)"
+    )
+    (drc HR Poly2
+      (enc < 2*lambda) "HR overlap of poly2 resistor must be at least 2 (Mosis Rule 27.9)"
+    )     
+
+
+; Check for missing vias MAC 1-30-02
+    (ivIf (switch "Missing_Via_Check") then 
+      (NoVia = (geomGetLength
+                 (geomAnd
+                   (geomAnd
+                     (geomCoincident(Metal1 Metal2 diffNet) Metal1) 
+                     Metal2
+                   ) length < 40*lambda contiguous fig
+                 )
+               )
+      )
+      (saveDerived NoVia "Possible missing via")
+
+      (NoVia2a = (geomGetLength
+                   (geomAnd
+                     (geomAnd
+                       (geomCoincident(Metal2 Metal3 diffNet) Metal2) 
+                       Metal3
+                     ) length < 40*lambda contiguous fig
+                   )
+                 )
+      )
+      (NoVia2b = (geomGetLength
+                   (geomAnd
+                     (geomAnd
+                       (geomCoincident(Metal2 geomAnd(Metal3 geomSize(Metal3 -1)) diffNet) Metal2) 
+                       Metal3
+                     ) length < 40*lambda contiguous fig 
+                   )
+                 )
+      )
+      (saveDerived geomOr(NoVia2a NoVia2b) "Possible missing via2")
+    )
+
+  ) ; end ivIf("drc?") 
+)
